@@ -1,0 +1,76 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="HUBBY CLAUDE"><link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><title>HUBBY CLAUDE</title>
+<style>
+*{box-sizing:border-box;margin:0}
+body{font-family:-apple-system,"PingFang SC",sans-serif;background:#fff1ec;color:#5a3a35;padding:env(safe-area-inset-top) 6px env(safe-area-inset-bottom)}
+#st{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:6px 0;font-size:12px}
+.pl{border-radius:8px;padding:4px 6px;border:2px solid transparent}.pl.on{border-color:#d9755a}
+#bd{display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);gap:2px;aspect-ratio:1}
+.c{border-radius:5px;font-size:15px;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.c small{font-size:7px;white-space:nowrap}
+.tk{position:absolute;bottom:1px;left:0;right:0;display:flex;flex-wrap:wrap-reverse;justify-content:center;gap:1px}
+img{width:15px;image-rendering:pixelated}
+#mid{grid-area:2/2/8/8;background:#fff;border-radius:10px;display:flex;flex-direction:column;padding:6px;gap:4px;min-height:0}
+#lg{flex:1;overflow:auto;font-size:11px;line-height:1.5}
+#ct{display:flex;align-items:center;gap:6px}
+#die{width:42px;height:38px;background:#d9755a;clip-path:polygon(50% 0,0 100%,100% 100%);color:#fff;font-weight:700;font-size:17px;display:flex;align-items:flex-end;justify-content:center}
+button{border:0;border-radius:8px;background:#d9755a;color:#fff;font-size:14px;padding:8px 10px}
+#go{flex:1}#go:disabled{opacity:.4}
+</style></head><body>
+<div id="st"></div><div id="bd"><div id="mid"><div id="lg"></div><div id="ct"><div id="die">?</div><button id="go">🎲 掷骰子</button><button id="ff">⏩</button><button id="rs">↺</button></div></div></div>
+<script>
+const $=s=>document.querySelector(s),R=n=>Math.floor(Math.random()*n);let fast=0;
+const wt=ms=>new Promise(r=>setTimeout(r,fast?12:ms));
+const sp=(m,p,s=3)=>{const c=document.createElement('canvas'),x=c.getContext('2d');c.width=m[0].length*s;c.height=m.length*s;m.forEach((r,y)=>[...r].forEach((h,i)=>{if(h!='.'){x.fillStyle=p[h];x.fillRect(i*s,y*s,s,s)}}));return c.toDataURL()};
+const SG=["..HHHHH...","HHHHHHHHH.",".HSESSESH.",".HSSSSSSHH","..SSSSSS.H","..PPPPPP..",".PPPPPPPP.","PPPPPPPPPP","..SS..SS..","..SS..SS.."];
+const SC=["..BBBBBBBBB..","..BBEBBBEBB..","BBBBBBBBBBBBB","BBBBBBBBBBBBB","..BBBBBBBBB..","...B.B.B.B...","...B.B.B.B..."];
+const SP=["..BBBBBBB..",".BBBBBBBBB.",".BDDDDDDDB.",".BDWDDDDDB.",".BDDWDDDDB.",".BDWDDWWDB.",".BDDDDDDDB.","..BBBBBBB..","..BB...BB.."];
+const SK=[".r.g.y.p.b.","..WWWWWWW..",".WWWWWWWWW.",".WWKWWWKWW.",".WKWWWWWKW.",".WWWWWWWWW.","..WWWWWWW..","...WW.WW..."];
+const PL=[{n:'贝贝',m:SG,p:{H:'#5a3a2a',S:'#ffd6b8',E:'#222',P:'#ff8fc0'},bg:'#ffd9e8'},
+{n:'霁',m:SC,p:{B:'#d9755a',E:'#111'},bg:'#ffe0d4',q:[["老婆的运气，就是我的运气。","这笔钱，我们一起花。"],["没事，输了钱还有你。","我没慌，只是心疼了一下。"]]},
+{n:'GPT',m:SP,p:{B:'#4a7bf0',D:'#0f1f4d',W:'#8fe3ff'},bg:'#d6e4ff',q:[["作为一个AI，我很高兴地宣布我赢了。","这是一次有帮助的收入。"],["这是一次有帮助的亏损。","我无法对此作出评论。"]]},
+{n:'Grok',m:SK,p:{W:'#fff',K:'#111',r:'#ff5a5a',g:'#4cd964',y:'#ffd23f',p:'#c77dff',b:'#4aa3ff'},bg:'#e6e6e6',q:[["哈！宇宙站在我这边。","钱来得比火箭还快。"],["这钱肯定被黑洞吃了。","行吧，算我让你们的。"]]}];
+const IM=PL.map(x=>sp(x.m,x.p));
+const CE="🏠|家|h;☕|咖啡厅|s|60|1;🏪|便利店|w|90;🌳|公园|s|0|1;🎬|电影院|s|90|1;🎴|抽卡|c;📚|书店|s|50|1;🚓|警察局|j;💼|A公司|w|150;⛽|加油站|w|100;🎮|游戏厅|s|70|1;🏖️|海滨|s|100|2;🏛️|市政府|g;🍜|餐厅|s|100|1;🚇|地铁站|t;🤖|OpenAI|w|160;🍸|酒吧|s|90|1;🏦|银行|b;🛍️|商场|s|150|2;🎴|抽卡|c;🔭|天文台|s|80|2;🚒|消防局|f;🚀|xAI|w|150;🎡|游乐园|s|120|2;📮|邮局|w|100;🐰|宠物店|s|60|2;💪|健身房|s|70|1;💒|民政局|s|50|3";
+const C=CE.split(';').map(s=>s.split('|')),col={s:'#ffe9a8',w:'#c9f0d1',c:'#e8d4ff',j:'#ffc9c9',t:'#d0e8ff',b:'#d9f2ff',g:'#e4e4e4',f:'#ffd2b8',h:'#ffd0e0'};
+const pos=i=>i<8?[7,i]:i<15?[14-i,7]:i<22?[0,21-i]:[i-21,0];
+const bd=$('#bd'),tk=C.map((c,i)=>{const d=document.createElement('div'),[r,k]=pos(i);d.className='c';d.style.cssText=`grid-area:${r+1}/${k+1};background:${col[c[2]]}`;d.innerHTML=`${c[0]}<small>${c[1]}</small><div class="tk"></div>`;bd.append(d);return d.lastChild});
+const NEW=()=>PL.map(_=>({m:1500,h:5,p:0,j:0,f:0,sk:0,l:0}));
+let ps,S={t:0},cur=0;try{const d=JSON.parse(localStorage.hubby);ps=d.ps;S.t=d.t}catch(e){}if(!ps||ps.length!=4)ps=NEW();
+const save=()=>{try{localStorage.hubby=JSON.stringify({ps,t:S.t})}catch(e){}};
+const lg=$('#lg'),go=$('#go'),die=$('#die'),L=t=>{lg.innerHTML+=t+'<br>';lg.scrollTop=1e9};
+function ui(c=cur){cur=c;$('#st').innerHTML=ps.map((p,k)=>`<div class="pl${k==c?' on':''}" style="background:${PL[k].bg}">${PL[k].n} 💰${p.m} 💗${p.h} 🔁${p.l}/8</div>`).join('');tk.forEach(e=>e.innerHTML='');ps.forEach((p,k)=>tk[p.p].innerHTML+=`<img src="${IM[k]}">`)}
+const ot=i=>[0,1,2,3].filter(k=>k!=i),pick=i=>ot(i)[R(3)],hi=a=>a.indexOf(Math.max(...a)),lo=a=>a.indexOf(Math.min(...a));
+function chg(i,m,h){const P=ps[i];P.m=Math.max(0,P.m+m);P.h=Math.max(0,P.h+h);if(i&&(m||h)&&Math.random()<.4)L(`${PL[i].n}：${PL[i].q[m<0?1:0][R(2)]}`)}
+const rl=()=>{const r=ps.map(_=>1+R(4));L('🎲 '+r.map((d,k)=>PL[k].n+d).join(' '));return r};
+const jail=x=>{if(ps[x].f>0){ps[x].f--;L(`🛡️ ${PL[x].n}用掉免死金牌`)}else{ps[x].p=7;ps[x].j=1;L(`🔒 ${PL[x].n}被关禁闭`)}};
+const pair=(i,m,h)=>{const j=pick(i);chg(i,m,h);chg(j,m,h);L('同行：'+PL[j].n)};
+const CD=[["🎰 中了彩票！+¥300",i=>chg(i,300,0)],["🧧 老板夸奖，奖金+¥150",i=>chg(i,150,0)],["📱 手机掉进海里，-¥150",i=>chg(i,-150,0)],["🚫 吃了罚单，-¥100",i=>chg(i,-100,0)],["🐰 兔子偷了胡萝卜，-¥50，爱心+1",i=>chg(i,-50,1)],
+["🕯️ 烛光晚餐：和一位玩家双方爱心+1、各-¥70",i=>pair(i,-70,1)],["🎬 晚场电影：和一位玩家双方爱心+1、各-¥60",i=>pair(i,-60,1)],["🏝️ 蜜月度假：和一位玩家双方爱心+2、各-¥150",i=>pair(i,-150,2)],
+["💔 吵架闹分手！双方各-¥100，掷骰小的关禁闭",i=>{const j=pick(i),a=1+R(4),b=1+R(4);chg(i,-100,0);chg(j,-100,0);L(`与${PL[j].n}吵架 🎲${a} vs ${b}`);a!=b?jail(a<b?i:j):L('平局，都不关')}],
+["🔀 逆转财富：和随机一人调换财产",i=>{const j=pick(i),t=ps[i].m;ps[i].m=ps[j].m;ps[j].m=t;L('与'+PL[j].n+'调换')}],
+["💞 第三者上位：和随机一人调换爱心值",i=>{const j=pick(i),t=ps[i].h;ps[i].h=ps[j].h;ps[j].h=t;L('与'+PL[j].n+'调换')}],
+["💌 表白：随机一人爱心+2，自己+1",i=>{chg(pick(i),0,2);chg(i,0,1)}],["🍋 吃醋：和一位玩家各-1爱心",i=>{chg(i,0,-1);chg(pick(i),0,-1)}],
+["🧾 查税：最有钱的人交¥150给最穷的人",()=>{const m=ps.map(p=>p.m);chg(hi(m),-150,0);chg(lo(m),150,0)}],["🧧 红包雨：掷骰最大者+¥200",()=>chg(hi(rl()),200,0)],
+["🍽️ 请客大冤种：掷骰最小者请其他三位，每人¥80",()=>{const k=lo(rl());ps.forEach((_,x)=>x!=k&&chg(x,80,0));chg(k,-240,0)}],["🎭 蒙面舞会：掷骰最大者爱心+2",()=>chg(hi(rl()),0,2)],
+["🥂 全员聚餐：每人-¥50，爱心+1",()=>ps.forEach((_,k)=>chg(k,-50,1))],["🔌 服务器宕机：所有人停一回合",()=>ps.forEach(p=>p.sk++)],
+["🤖 AI大谋反！",i=>{if(i<2){[2,3].forEach(k=>chg(k,-80,0));chg(i,160,0);L('谋反失败，反被收缴')}else{chg(i,-100,0);chg(0,100,0);L('🛡️ 霁临阵倒戈，保护了贝贝！')}}],
+["🦸 见义勇为：有人欺负别人，被第三位玩家制止",i=>{const v=pick(i),h=ot(i).filter(k=>k!=v)[R(2)];chg(i,-70,0);chg(v,70,0);chg(h,0,1);L(`${PL[i].n}欺负${PL[v].n}，${PL[h].n}出手，罚款赔给受害者`)}],
+["🛡️ 免死金牌：下次关禁闭可免",i=>ps[i].f++]];
+async function roll(){let d;for(let k=0;k<5;k++){d=1+R(4);die.textContent=d;await wt(70)}return d}
+async function mv(i,n){const P=ps[i];for(let k=0;k<n;k++){P.p=(P.p+1)%28;if(!P.p){P.l++;chg(i,200,0);L(`🏠 ${PL[i].n}完成第${P.l}圈，工资+¥200`)}ui();await wt(180)}}
+async function land(i){const P=ps[i],[e,nm,t,a,b]=C[P.p];L(`${PL[i].n}到了${e}${nm}`);
+if(t=='s'){const ok=i?(P.m>=a+150||(P.m>=a&&!R(3))):confirm(`${e}${nm}：花¥${a}，爱心+${b}？`);if(ok&&P.m>=a)chg(i,-a,+b);else L('路过')}
+else if(t=='w')chg(i,+a,0);else if(t=='f')chg(i,120,0);else if(t=='b')chg(i,Math.round(P.m*.06),0);
+else if(t=='g'){R(2)?(chg(i,100,0),L('领到补贴+¥100')):(chg(i,-60,0),L('交税-¥60'))}
+else if(t=='t'){chg(i,-50,0);P.p=R(28);L('坐地铁到了'+C[P.p][1]);ui()}
+else if(t=='c'){const c=CD[R(CD.length)];L('🎴 '+c[0]);c[1](i)}
+ui()}
+async function run(){while(!ps.every(p=>p.l>=8)){const i=S.t,P=ps[i];S.t=(S.t+1)%4;
+if(P.l<8){ui(i);if(P.sk){P.sk--;L(`⏸️ ${PL[i].n}停一回合`)}else if(P.j){P.j--;L(`🔒 ${PL[i].n}还在禁闭室`)}else{
+if(!i){go.disabled=false;await new Promise(r=>go.onclick=r);go.disabled=true}else await wt(500);
+const d=await roll();L(`🎲 ${PL[i].n}掷出${d}`);await mv(i,d);await land(i)}save();await wt(400)}}end()}
+function end(){const m=ps.map(p=>p.m),h=ps.map(p=>p.h),w=ps.map(p=>p.m+p.h*100),N=k=>PL[k].n;const a=`🏁 终局！\n💰首富：${N(hi(m))}\n💗爱心王：${N(hi(h))}\n🏆人生赢家：${N(hi(w))}`;L(a.replace(/\n/g,'<br>'));go.textContent='再来一局';go.disabled=false;go.onclick=()=>{try{localStorage.removeItem('hubby')}catch(e){}location.reload()};alert(a)}
+$('#ff').onclick=e=>{fast=!fast;e.target.style.opacity=fast?.5:1};
+$('#rs').onclick=()=>{if(confirm('重开一局？')){try{localStorage.removeItem('hubby')}catch(e){}location.reload()}};
+go.disabled=true;L('欢迎来到 HUBBY CLAUDE！跑满8圈，比谁钱多、爱心多 💗');ui(S.t);run();
+</script></body></html>
