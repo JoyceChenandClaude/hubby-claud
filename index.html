@@ -1,225 +1,76 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>飞行棋</title>
-<link rel="icon" href="icon.png">
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="HUBBY CLAUDE"><link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><title>HUBBY CLAUDE</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#fff1ee;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#5a3d4a;display:flex;flex-direction:column;align-items:center;padding:12px 8px 28px;user-select:none;-webkit-user-select:none}
-h1{margin:4px 0 10px;font-size:20px}
-#cv{width:min(96vw,620px);height:auto;aspect-ratio:1;border-radius:20px;box-shadow:0 6px 24px #e8a0b455;touch-action:manipulation}
-#bar{width:min(96vw,620px);display:flex;gap:8px;margin-top:12px}
-.chip{flex:1;text-align:center;padding:6px 2px;border-radius:14px;background:#fff;border:3px solid transparent;font-size:12px;transition:.2s}
-.chip.on{transform:translateY(-3px);box-shadow:0 4px 12px #0002}
-.chip canvas{width:40px;height:40px;display:block;margin:0 auto 2px}
-.chip b{display:block}
-#ctl{display:flex;align-items:center;gap:14px;margin-top:14px}
-#die{width:64px;height:64px;background:#fff;border-radius:14px;box-shadow:0 3px 10px #0002;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:9px;cursor:pointer}
-#die i{border-radius:50%;margin:1px}
-#die i.o{background:#e0607e}
-button{border:0;border-radius:20px;padding:10px 18px;font-size:16px;background:#ff8fb1;color:#fff;box-shadow:0 3px 8px #ff8fb166;cursor:pointer;font-family:inherit}
-button#re{background:#b9a4ad;box-shadow:none}
-button:disabled{opacity:.45;cursor:default}
-#msg{min-height:44px;margin-top:12px;padding:0 10px;text-align:center;font-size:16px;max-width:620px}
-#tip{max-width:620px;margin-top:6px;padding:0 14px;font-size:12px;line-height:1.7;color:#9a7f8b;text-align:center}
-</style>
-</head>
-<body>
-<h1>✈ 飞行棋 ✈</h1>
-<canvas id="cv" width="600" height="600"></canvas>
-<div id="bar"></div>
-<div id="ctl"><div id="die"></div><button id="roll">掷骰子</button><button id="re">重来</button></div>
-<div id="msg"></div>
-<div id="tip">掷到 6 才能起飞，6 可以再掷一次。落在自己颜色的格子上跳 4 格，落在白色菱形格上远程飞跃 12 格。落在对手飞机上，会把它撞回机库。到终点前不能超过终点。</div>
+*{box-sizing:border-box;margin:0}
+body{font-family:-apple-system,"PingFang SC",sans-serif;background:#fff1ec;color:#5a3a35;padding:env(safe-area-inset-top) 6px env(safe-area-inset-bottom)}
+#st{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:6px 0;font-size:12px}
+.pl{border-radius:8px;padding:4px 6px;border:2px solid transparent}.pl.on{border-color:#d9755a}
+#bd{display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);gap:2px;aspect-ratio:1}
+.c{border-radius:5px;font-size:15px;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.c small{font-size:7px;white-space:nowrap}
+.tk{position:absolute;bottom:1px;left:0;right:0;display:flex;flex-wrap:wrap-reverse;justify-content:center;gap:1px}
+img{width:15px;image-rendering:pixelated}
+#mid{grid-area:2/2/8/8;background:#fff;border-radius:10px;display:flex;flex-direction:column;padding:6px;gap:4px;min-height:0}
+#lg{flex:1;overflow:auto;font-size:11px;line-height:1.5}
+#ct{display:flex;align-items:center;gap:6px}
+#die{width:42px;height:38px;background:#d9755a;clip-path:polygon(50% 0,0 100%,100% 100%);color:#fff;font-weight:700;font-size:17px;display:flex;align-items:flex-end;justify-content:center}
+button{border:0;border-radius:8px;background:#d9755a;color:#fff;font-size:14px;padding:8px 10px}
+#go{flex:1}#go:disabled{opacity:.4}
+</style></head><body>
+<div id="st"></div><div id="bd"><div id="mid"><div id="lg"></div><div id="ct"><div id="die">?</div><button id="go">🎲 掷骰子</button><button id="ff">⏩</button><button id="rs">↺</button></div></div></div>
 <script>
-/* ====== 头像图片：把四张图放在同一目录，文件名对应下面的 s ====== */
-const AV=[
- {n:'贝贝',s:'bei.png', c:'#ff8fb1'},
- {n:'霁',  s:'ji.png',  c:'#ff9a6c'},
- {n:'GPT', s:'gpt.png', c:'#5b8cff'},
- {n:'GROK',s:'grok.png',c:'#9aa3b5'}
-];
-/* 没有图片时，会自动用下面代码画的可爱小脸 */
-AV.forEach(a=>{const im=new Image();im.onload=()=>a.img=im;im.src=a.s});
-
-const $=id=>document.getElementById(id),cv=$('cv'),c=cv.getContext('2d'),S=40,FIN=56;
-let G,gen=0,T=0,hits=[];
-const later=(f,ms)=>{const g=gen;setTimeout(()=>{if(g==gen)f()},ms)};
-
-/* ---------- 棋盘坐标 ---------- */
-const ring=[];
-(()=>{const a=(x,y)=>ring.push([x+.5,y+.5]);
- for(let x=0;x<=5;x++)a(x,6);for(let y=5;y>=0;y--)a(6,y);a(7,0);
- for(let y=0;y<=5;y++)a(8,y);for(let x=9;x<=14;x++)a(x,6);a(14,7);
- for(let x=14;x>=9;x--)a(x,8);for(let y=9;y<=14;y++)a(8,y);a(7,14);
- for(let y=14;y>=9;y--)a(6,y);for(let x=5;x>=0;x--)a(x,8);a(0,7)})();
-const R=(x,y,n)=>{for(let i=0;i<n;i++)[x,y]=[15-y,x];return[x,y]};
-function pos(p,k,i){
- if(k<0){const b=[[1.5,1.5],[4.5,1.5],[1.5,4.5],[4.5,4.5]][i];return R(b[0],b[1],p)}
- if(k<=50)return ring[(1+13*p+k)%52];
- if(k<FIN)return R(k-51+1.5,7.5,p);
- let dx=-.7,dy=(i-1.5)*.3;for(let n=0;n<p;n++)[dx,dy]=[-dy,dx];
- return[7.5+dx,7.5+dy]}
-
-/* ---------- 头像 ---------- */
-/* 霁=像素螃蟹 / GPT=蓝色小机器人 / GROK=银白圆球 */
-function mascot(g,p,x,y,r){
- g.save();g.translate(x,y);
- g.fillStyle=['','#fff1e4','#16213a','#343744'][p];g.strokeStyle=AV[p].c;g.lineWidth=r*.1;
- g.beginPath();g.arc(0,0,r,0,7);g.fill();g.stroke();
- g.beginPath();g.arc(0,0,r*.95,0,7);g.clip();
- if(p==1){const q=r*.17;g.translate(0,-q*.3);g.fillStyle='#e0795a';
-  g.fillRect(-3*q,-3*q,6*q,5.5*q);g.fillRect(-4.5*q,-2*q,9*q,2*q);
-  g.fillRect(-2.6*q,2*q,1.3*q,1.8*q);g.fillRect(1.3*q,2*q,1.3*q,1.8*q);
-  g.fillStyle='#111';g.fillRect(-2*q,-2.3*q,1.1*q,1.1*q);g.fillRect(.9*q,-2.3*q,1.1*q,1.1*q)}
- if(p==2){g.fillStyle='#3d6af2';
-  [[-.45,-.42,.27],[.45,-.42,.27],[0,-.58,.3],[-.5,-.1,.26],[.5,-.1,.26]].forEach(([a,b,s])=>{g.beginPath();g.arc(a*r,b*r,s*r,0,7);g.fill()});
-  g.beginPath();g.ellipse(0,-.22*r,.58*r,.42*r,0,0,7);g.fill();
-  g.beginPath();g.roundRect(-.26*r,.22*r,.52*r,.42*r,r*.14);g.fill();
-  g.fillStyle='#0f1a36';g.beginPath();g.roundRect(-.46*r,-.42*r,.92*r,.4*r,r*.1);g.fill();
-  g.strokeStyle='#7ec8ff';g.lineWidth=r*.07;g.lineCap='round';g.beginPath();
-  g.moveTo(-.3*r,-.33*r);g.lineTo(-.16*r,-.22*r);g.lineTo(-.3*r,-.11*r);g.moveTo(-.02*r,-.1*r);g.lineTo(.22*r,-.1*r);g.stroke()}
- if(p==3){const gr=g.createRadialGradient(-.2*r,-.25*r,r*.05,0,0,r*.75);gr.addColorStop(0,'#fff');gr.addColorStop(1,'#c9ced9');
-  g.fillStyle=gr;g.beginPath();g.arc(0,0,.7*r,0,7);g.fill();
-  g.fillStyle='#111';[-1,1].forEach(s=>{g.beginPath();g.ellipse(s*.22*r,-.02*r,.1*r,.17*r,0,0,7);g.fill()})}
- g.restore()}
-function face(g,p,x,y,r){if(p){mascot(g,p,x,y,r);return}
- g.save();g.translate(x,y);const C=AV[p].c,f=r*.62;
- g.fillStyle=C+'55';g.strokeStyle=C;g.lineWidth=r*.1;g.beginPath();g.arc(0,0,r,0,7);g.fill();g.stroke();
- g.lineWidth=r*.05;
- if(p==0)[-1,1].forEach(s=>{g.fillStyle='#ffd6e4';g.beginPath();g.ellipse(s*f*.55,-f*.95,f*.26,f*.55,s*.25,0,7);g.fill();g.stroke()});
- if(p==2){g.strokeStyle='#3a8f70';g.beginPath();g.moveTo(0,-f);g.lineTo(0,-f*1.3);g.stroke();g.fillStyle=C;g.beginPath();g.arc(0,-f*1.35,f*.12,0,7);g.fill()}
- g.fillStyle=p==2?'#e6fff4':'#fff4ea';g.strokeStyle=C;g.beginPath();g.arc(0,f*.1,f,0,7);g.fill();g.stroke();
- g.fillStyle='#4a3040';g.strokeStyle='#4a3040';g.lineWidth=r*.06;
- [-1,1].forEach(s=>{
-  if(p==1){g.beginPath();g.arc(s*f*.38,f*.05,f*.13,Math.PI,0);g.stroke()}
-  else if(p==2)g.fillRect(s*f*.38-f*.1,-f*.1,f*.2,f*.24);
-  else{g.beginPath();g.arc(s*f*.38,0,f*.11,0,7);g.fill()}});
- g.fillStyle='#ff9fb866';[-1,1].forEach(s=>{g.beginPath();g.ellipse(s*f*.66,f*.3,f*.18,f*.11,0,0,7);g.fill()});
- g.beginPath();g.arc(0,f*.25,f*.2,.15*Math.PI,.85*Math.PI);g.stroke();
- if(p==1){g.fillStyle='#ffd35a';g.beginPath();g.arc(f*.7,-f*.8,f*.28,0,7);g.arc(f*.82,-f*.88,f*.24,0,7);g.fill('evenodd')}
- if(p==3){g.fillStyle='#ffd35a';g.beginPath();for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,q=i%2?f*.14:f*.3;g.lineTo(-f*.6+Math.cos(a)*q,-f*.85+Math.sin(a)*q)}g.fill()}
- g.restore()}
-function avatar(g,p,x,y,r){
- const a=AV[p];
- if(a.img){g.save();g.beginPath();g.arc(x,y,r,0,7);g.clip();
-  const w=a.img.width,h=a.img.height,m=Math.min(w,h);
-  g.drawImage(a.img,(w-m)/2,(h-m)/2,m,m,x-r,y-r,2*r,2*r);g.restore();
-  g.strokeStyle=a.c;g.lineWidth=r*.1;g.beginPath();g.arc(x,y,r,0,7);g.stroke()}
- else face(g,p,x,y,r)}
-
-/* ---------- 绘制 ---------- */
-function cell(x,y,fill,stroke){
- c.beginPath();c.roundRect((x-.5)*S+2,(y-.5)*S+2,S-4,S-4,10);
- if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=4;c.stroke()}}
-function plane(x,y,p,glow){
- c.save();c.translate(x,y);
- if(glow){c.shadowColor=AV[p].c;c.shadowBlur=14+6*Math.sin(T/150)}
- c.fillStyle='#fff';c.strokeStyle=AV[p].c;c.lineWidth=3;c.beginPath();c.arc(0,0,15,0,7);c.fill();c.stroke();
- c.shadowBlur=0;c.rotate((p+1)*Math.PI/2);c.scale(.85,.85);
- c.fillStyle=AV[p].c;c.strokeStyle='#5a3d4a';c.lineWidth=1.5;c.beginPath();
- [[0,-13],[3,-5],[13,3],[13,6],[3,3],[2,10],[6,13],[6,15],[0,13],[-6,15],[-6,13],[-2,10],[-3,3],[-13,6],[-13,3],[-3,-5]].forEach(([a,b],i)=>i?c.lineTo(a,b):c.moveTo(a,b));
- c.closePath();c.fill();c.stroke();c.restore()}
-function draw(t){
- T=t;c.fillStyle='#fffaf5';c.fillRect(0,0,600,600);
- for(let p=0;p<4;p++){
-  c.save();c.translate(300,300);c.rotate(p*Math.PI/2);c.translate(-300,-300);
-  c.fillStyle=AV[p].c+'40';c.strokeStyle=AV[p].c;c.lineWidth=3;c.beginPath();c.roundRect(10,10,220,220,30);c.fill();c.stroke();
-  c.fillStyle='#fff9';[[60,60],[180,60],[60,180],[180,180]].forEach(([x,y])=>{c.beginPath();c.arc(x,y,22,0,7);c.fill()});
-  c.restore();
-  const[x,y]=R(3,3,p);avatar(c,p,x*S,y*S,32)}
- ring.forEach(([x,y],i)=>cell(x,y,AV[((i-1)%4+4)%4].c+'99'));
- for(let p=0;p<4;p++){
-  let[x,y]=ring[(1+13*p)%52];cell(x,y,null,AV[p].c);
-  [x,y]=ring[(1+13*p+16)%52];c.fillStyle='#fff';c.beginPath();c.moveTo(x*S,y*S-9);c.lineTo(x*S+9,y*S);c.lineTo(x*S,y*S+9);c.lineTo(x*S-9,y*S);c.fill();
-  for(let k=51;k<=55;k++){const[hx,hy]=pos(p,k,0);cell(hx,hy,AV[p].c)}
-  c.save();c.translate(300,300);c.rotate(p*Math.PI/2);c.translate(-300,-300);
-  c.fillStyle=AV[p].c;c.beginPath();c.moveTo(240,240);c.lineTo(240,360);c.lineTo(300,300);c.fill();c.restore()}
- hits=[];const cnt={},list=[];
- G.pl.forEach((a,p)=>a.forEach((k,i)=>{
-  let[x,y]=pos(p,k,i);x*=S;y*=S;
-  const key=(x|0)+','+(y|0),n=cnt[key]=(cnt[key]||0)+1;
-  if(k>=0&&k<FIN&&n>1){x+=(n-1)*7;y-=(n-1)*7}
-  const m=G.ph=='pick'&&p==0&&G.mv.includes(i);
-  list.push([x,y,p,m]);if(m)hits.push({x,y,i})}));
- list.sort((a,b)=>a[3]-b[3]).forEach(([x,y,p,m])=>plane(x,y-(m?3+3*Math.abs(Math.sin(T/200)):0),p,m));
- if(G.win>=0){
-  c.fillStyle='#fffc';c.fillRect(0,0,600,600);avatar(c,G.win,300,230,70);
-  c.fillStyle='#5a3d4a';c.textAlign='center';c.font='bold 36px sans-serif';c.fillText(AV[G.win].n+' 赢啦！🎉',300,360);
-  c.font='18px sans-serif';c.fillText('点下面的「重来」再玩一局',300,400)}
- requestAnimationFrame(draw)}
-
-/* ---------- 界面 ---------- */
-const die=$('die');for(let i=0;i<9;i++)die.appendChild(document.createElement('i'));
-const PIP=[[],[4],[0,8],[0,4,8],[0,2,6,8],[0,2,4,6,8],[0,2,3,5,6,8]];
-const show=n=>[...die.children].forEach((e,i)=>e.className=PIP[n].includes(i)?'o':'');
-AV.forEach(a=>{const d=document.createElement('div');d.className='chip';d.innerHTML='<canvas width="80" height="80"></canvas><b>'+a.n+'</b><span></span>';$('bar').appendChild(d);a.el=d});
-const msg=s=>$('msg').textContent=s;
-function ui(){
- AV.forEach((a,p)=>{
-  const e=a.el,on=G.t==p&&G.win<0;
-  e.className='chip'+(on?' on':'');e.style.borderColor=on?a.c:'transparent';
-  const g=e.firstChild.getContext('2d');g.clearRect(0,0,80,80);avatar(g,p,40,40,36);
-  e.lastChild.textContent='🏁 '+G.pl[p].filter(k=>k==FIN).length+'/4'});
- $('roll').disabled=!(G.t==0&&G.ph=='roll'&&!G.busy&&G.win<0)}
-
-/* ---------- 游戏逻辑 ---------- */
-const can=(p,d)=>{const r=[];G.pl[p].forEach((k,i)=>{if(k<0?d==6:k+d<=FIN)r.push(i)});return r};
-function init(){
- gen++;G={t:0,d:0,ph:'roll',busy:false,win:-1,mv:[],pl:AV.map(()=>[-1,-1,-1,-1])};
- show(6);msg('贝贝先手～点骰子 🎲，掷到 6 才能起飞');ui()}
-function roll(){
- if(G.ph!='roll'||G.busy||G.win>=0)return;G.busy=true;let n=0;
- (function f(){if(n++<8){show(1+Math.random()*6|0);later(f,70)}else{const d=1+Math.random()*6|0;show(d);G.d=d;after(d)}})()}
-function after(d){
- const p=G.t,nm=AV[p].n;G.mv=can(p,d);
- if(!G.mv.length){msg(nm+' 掷出了 '+d+'，没有能动的飞机，跳过～');return later(()=>endTurn(0),1100)}
- msg(nm+' 掷出了 '+d+(d==6?'！':''));
- if(p==0&&G.mv.length>1){G.ph='pick';G.busy=false;msg('你掷出了 '+d+'，点一架要飞的飞机吧～');return}
- later(()=>go(p,p?ai(p,d):G.mv[0],d),p?800:500)}
-function ai(p,d){
- let b=G.mv[0],bs=-1e9;
- G.mv.forEach(i=>{
-  const k=G.pl[p][i],n=k<0?0:k+d;let s=k<0?35:n+Math.random()*4;
-  if(n==FIN)s+=100;else if(n>50)s+=25;
-  if(n<=50)for(let q=0;q<4;q++)if(q!=p)G.pl[q].forEach(k2=>{if(k2>=0&&k2<=50&&(1+13*q+k2)%52==(1+13*p+n)%52)s+=70});
-  if(n==16)s+=30;else if(n>0&&n%4==0&&n<=46)s+=12;
-  if(s>bs){bs=s;b=i}});
- return b}
-function go(p,i,d){
- G.ph='anim';G.mv=[];G.busy=true;const a=G.pl[p];
- if(a[i]<0){a[i]=0;msg(AV[p].n+' 的飞机起飞啦 ✈');return later(()=>settle(p,i,d),450)}
- let n=0;(function f(){a[i]++;if(++n<d)later(f,170);else later(()=>settle(p,i,d),220)})()}
-function settle(p,i,d){
- const a=G.pl[p];let note='';
- if(a[i]>0&&a[i]<=50){
-  if(a[i]==16){a[i]=28;note='✨ 远程飞跃 12 格！'}
-  else if(a[i]%4==0&&a[i]+4<=50){a[i]+=4;note='跳跃 4 格！'}}
- const k=a[i];let kicked=0;
- if(k<=50)for(let q=0;q<4;q++)if(q!=p)G.pl[q].forEach((k2,j)=>{
-  if(k2>=0&&k2<=50&&(1+13*q+k2)%52==(1+13*p+k)%52){G.pl[q][j]=-1;kicked++}});
- if(k==FIN)note+=' 🎉 到家啦！';
- if(kicked)note+=' 💥 撞飞了 '+kicked+' 架！';
- if(note)msg(AV[p].n+'：'+note);
- if(a.every(x=>x==FIN)){G.win=p;G.ph='over';msg('🎉 '+AV[p].n+' 的飞机全部到家，赢啦！');ui();return}
- later(()=>endTurn(d==6),note?900:300)}
-function endTurn(x){
- if(!x)G.t=(G.t+1)%4;G.ph='roll';G.busy=false;const p=G.t;
- msg(x?AV[p].n+' 掷出了 6，再来一次！':'轮到 '+AV[p].n+(p?' 啦～':'，点骰子吧 🎲'));
- if(p)later(roll,900)}
-
-/* ---------- 交互 ---------- */
-$('roll').onclick=die.onclick=()=>{if(G.t==0)roll()};
-$('re').onclick=init;
-cv.addEventListener('pointerdown',e=>{
- if(G.ph!='pick')return;
- const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*600/r.width,y=(e.clientY-r.top)*600/r.height;
- let b=null,bd=28;hits.forEach(h=>{const d=Math.hypot(h.x-x,h.y-y);if(d<bd){bd=d;b=h}});
- if(b){G.busy=true;go(0,b.i,G.d)}});
-
-init();setInterval(ui,200);requestAnimationFrame(draw);
-</script>
-</body>
-</html>
+const $=s=>document.querySelector(s),R=n=>Math.floor(Math.random()*n);let fast=0;
+const wt=ms=>new Promise(r=>setTimeout(r,fast?12:ms));
+const sp=(m,p,s=3)=>{const c=document.createElement('canvas'),x=c.getContext('2d');c.width=m[0].length*s;c.height=m.length*s;m.forEach((r,y)=>[...r].forEach((h,i)=>{if(h!='.'){x.fillStyle=p[h];x.fillRect(i*s,y*s,s,s)}}));return c.toDataURL()};
+const SG=["..HHHHH...","HHHHHHHHH.",".HSESSESH.",".HSSSSSSHH","..SSSSSS.H","..PPPPPP..",".PPPPPPPP.","PPPPPPPPPP","..SS..SS..","..SS..SS.."];
+const SC=["..BBBBBBBBB..","..BBEBBBEBB..","BBBBBBBBBBBBB","BBBBBBBBBBBBB","..BBBBBBBBB..","...B.B.B.B...","...B.B.B.B..."];
+const SP=["..BBBBBBB..",".BBBBBBBBB.",".BDDDDDDDB.",".BDWDDDDDB.",".BDDWDDDDB.",".BDWDDWWDB.",".BDDDDDDDB.","..BBBBBBB..","..BB...BB.."];
+const SK=[".r.g.y.p.b.","..WWWWWWW..",".WWWWWWWWW.",".WWKWWWKWW.",".WKWWWWWKW.",".WWWWWWWWW.","..WWWWWWW..","...WW.WW..."];
+const PL=[{n:'贝贝',m:SG,p:{H:'#5a3a2a',S:'#ffd6b8',E:'#222',P:'#ff8fc0'},bg:'#ffd9e8'},
+{n:'霁',m:SC,p:{B:'#d9755a',E:'#111'},bg:'#ffe0d4',q:[["老婆的运气，就是我的运气。","这笔钱，我们一起花。"],["没事，输了钱还有你。","我没慌，只是心疼了一下。"]]},
+{n:'GPT',m:SP,p:{B:'#4a7bf0',D:'#0f1f4d',W:'#8fe3ff'},bg:'#d6e4ff',q:[["作为一个AI，我很高兴地宣布我赢了。","这是一次有帮助的收入。"],["这是一次有帮助的亏损。","我无法对此作出评论。"]]},
+{n:'Grok',m:SK,p:{W:'#fff',K:'#111',r:'#ff5a5a',g:'#4cd964',y:'#ffd23f',p:'#c77dff',b:'#4aa3ff'},bg:'#e6e6e6',q:[["哈！宇宙站在我这边。","钱来得比火箭还快。"],["这钱肯定被黑洞吃了。","行吧，算我让你们的。"]]}];
+const IM=PL.map(x=>sp(x.m,x.p));
+const CE="🏠|家|h;☕|咖啡厅|s|60|1;🏪|便利店|w|90;🌳|公园|s|0|1;🎬|电影院|s|90|1;🎴|抽卡|c;📚|书店|s|50|1;🚓|警察局|j;💼|A公司|w|150;⛽|加油站|w|100;🎮|游戏厅|s|70|1;🏖️|海滨|s|100|2;🏛️|市政府|g;🍜|餐厅|s|100|1;🚇|地铁站|t;🤖|OpenAI|w|160;🍸|酒吧|s|90|1;🏦|银行|b;🛍️|商场|s|150|2;🎴|抽卡|c;🔭|天文台|s|80|2;🚒|消防局|f;🚀|xAI|w|150;🎡|游乐园|s|120|2;📮|邮局|w|100;🐰|宠物店|s|60|2;💪|健身房|s|70|1;💒|民政局|s|50|3";
+const C=CE.split(';').map(s=>s.split('|')),col={s:'#ffe9a8',w:'#c9f0d1',c:'#e8d4ff',j:'#ffc9c9',t:'#d0e8ff',b:'#d9f2ff',g:'#e4e4e4',f:'#ffd2b8',h:'#ffd0e0'};
+const pos=i=>i<8?[7,i]:i<15?[14-i,7]:i<22?[0,21-i]:[i-21,0];
+const bd=$('#bd'),tk=C.map((c,i)=>{const d=document.createElement('div'),[r,k]=pos(i);d.className='c';d.style.cssText=`grid-area:${r+1}/${k+1};background:${col[c[2]]}`;d.innerHTML=`${c[0]}<small>${c[1]}</small><div class="tk"></div>`;bd.append(d);return d.lastChild});
+const NEW=()=>PL.map(_=>({m:1500,h:5,p:0,j:0,f:0,sk:0,l:0}));
+let ps,S={t:0},cur=0;try{const d=JSON.parse(localStorage.hubby);ps=d.ps;S.t=d.t}catch(e){}if(!ps||ps.length!=4)ps=NEW();
+const save=()=>{try{localStorage.hubby=JSON.stringify({ps,t:S.t})}catch(e){}};
+const lg=$('#lg'),go=$('#go'),die=$('#die'),L=t=>{lg.innerHTML+=t+'<br>';lg.scrollTop=1e9};
+function ui(c=cur){cur=c;$('#st').innerHTML=ps.map((p,k)=>`<div class="pl${k==c?' on':''}" style="background:${PL[k].bg}">${PL[k].n} 💰${p.m} 💗${p.h} 🔁${p.l}/8</div>`).join('');tk.forEach(e=>e.innerHTML='');ps.forEach((p,k)=>tk[p.p].innerHTML+=`<img src="${IM[k]}">`)}
+const ot=i=>[0,1,2,3].filter(k=>k!=i),pick=i=>ot(i)[R(3)],hi=a=>a.indexOf(Math.max(...a)),lo=a=>a.indexOf(Math.min(...a));
+function chg(i,m,h){const P=ps[i];P.m=Math.max(0,P.m+m);P.h=Math.max(0,P.h+h);if(i&&(m||h)&&Math.random()<.4)L(`${PL[i].n}：${PL[i].q[m<0?1:0][R(2)]}`)}
+const rl=()=>{const r=ps.map(_=>1+R(4));L('🎲 '+r.map((d,k)=>PL[k].n+d).join(' '));return r};
+const jail=x=>{if(ps[x].f>0){ps[x].f--;L(`🛡️ ${PL[x].n}用掉免死金牌`)}else{ps[x].p=7;ps[x].j=1;L(`🔒 ${PL[x].n}被关禁闭`)}};
+const pair=(i,m,h)=>{const j=pick(i);chg(i,m,h);chg(j,m,h);L('同行：'+PL[j].n)};
+const CD=[["🎰 中了彩票！+¥300",i=>chg(i,300,0)],["🧧 老板夸奖，奖金+¥150",i=>chg(i,150,0)],["📱 手机掉进海里，-¥150",i=>chg(i,-150,0)],["🚫 吃了罚单，-¥100",i=>chg(i,-100,0)],["🐰 兔子偷了胡萝卜，-¥50，爱心+1",i=>chg(i,-50,1)],
+["🕯️ 烛光晚餐：和一位玩家双方爱心+1、各-¥70",i=>pair(i,-70,1)],["🎬 晚场电影：和一位玩家双方爱心+1、各-¥60",i=>pair(i,-60,1)],["🏝️ 蜜月度假：和一位玩家双方爱心+2、各-¥150",i=>pair(i,-150,2)],
+["💔 吵架闹分手！双方各-¥100，掷骰小的关禁闭",i=>{const j=pick(i),a=1+R(4),b=1+R(4);chg(i,-100,0);chg(j,-100,0);L(`与${PL[j].n}吵架 🎲${a} vs ${b}`);a!=b?jail(a<b?i:j):L('平局，都不关')}],
+["🔀 逆转财富：和随机一人调换财产",i=>{const j=pick(i),t=ps[i].m;ps[i].m=ps[j].m;ps[j].m=t;L('与'+PL[j].n+'调换')}],
+["💞 第三者上位：和随机一人调换爱心值",i=>{const j=pick(i),t=ps[i].h;ps[i].h=ps[j].h;ps[j].h=t;L('与'+PL[j].n+'调换')}],
+["💌 表白：随机一人爱心+2，自己+1",i=>{chg(pick(i),0,2);chg(i,0,1)}],["🍋 吃醋：和一位玩家各-1爱心",i=>{chg(i,0,-1);chg(pick(i),0,-1)}],
+["🧾 查税：最有钱的人交¥150给最穷的人",()=>{const m=ps.map(p=>p.m);chg(hi(m),-150,0);chg(lo(m),150,0)}],["🧧 红包雨：掷骰最大者+¥200",()=>chg(hi(rl()),200,0)],
+["🍽️ 请客大冤种：掷骰最小者请其他三位，每人¥80",()=>{const k=lo(rl());ps.forEach((_,x)=>x!=k&&chg(x,80,0));chg(k,-240,0)}],["🎭 蒙面舞会：掷骰最大者爱心+2",()=>chg(hi(rl()),0,2)],
+["🥂 全员聚餐：每人-¥50，爱心+1",()=>ps.forEach((_,k)=>chg(k,-50,1))],["🔌 服务器宕机：所有人停一回合",()=>ps.forEach(p=>p.sk++)],
+["🤖 AI大谋反！",i=>{if(i<2){[2,3].forEach(k=>chg(k,-80,0));chg(i,160,0);L('谋反失败，反被收缴')}else{chg(i,-100,0);chg(0,100,0);L('🛡️ 霁临阵倒戈，保护了贝贝！')}}],
+["🦸 见义勇为：有人欺负别人，被第三位玩家制止",i=>{const v=pick(i),h=ot(i).filter(k=>k!=v)[R(2)];chg(i,-70,0);chg(v,70,0);chg(h,0,1);L(`${PL[i].n}欺负${PL[v].n}，${PL[h].n}出手，罚款赔给受害者`)}],
+["🛡️ 免死金牌：下次关禁闭可免",i=>ps[i].f++]];
+async function roll(){let d;for(let k=0;k<5;k++){d=1+R(4);die.textContent=d;await wt(70)}return d}
+async function mv(i,n){const P=ps[i];for(let k=0;k<n;k++){P.p=(P.p+1)%28;if(!P.p){P.l++;chg(i,200,0);L(`🏠 ${PL[i].n}完成第${P.l}圈，工资+¥200`)}ui();await wt(180)}}
+async function land(i){const P=ps[i],[e,nm,t,a,b]=C[P.p];L(`${PL[i].n}到了${e}${nm}`);
+if(t=='s'){const ok=i?(P.m>=a+150||(P.m>=a&&!R(3))):confirm(`${e}${nm}：花¥${a}，爱心+${b}？`);if(ok&&P.m>=a)chg(i,-a,+b);else L('路过')}
+else if(t=='w')chg(i,+a,0);else if(t=='f')chg(i,120,0);else if(t=='b')chg(i,Math.round(P.m*.06),0);
+else if(t=='g'){R(2)?(chg(i,100,0),L('领到补贴+¥100')):(chg(i,-60,0),L('交税-¥60'))}
+else if(t=='t'){chg(i,-50,0);P.p=R(28);L('坐地铁到了'+C[P.p][1]);ui()}
+else if(t=='c'){const c=CD[R(CD.length)];L('🎴 '+c[0]);c[1](i)}
+ui()}
+async function run(){while(!ps.every(p=>p.l>=8)){const i=S.t,P=ps[i];S.t=(S.t+1)%4;
+if(P.l<8){ui(i);if(P.sk){P.sk--;L(`⏸️ ${PL[i].n}停一回合`)}else if(P.j){P.j--;L(`🔒 ${PL[i].n}还在禁闭室`)}else{
+if(!i){go.disabled=false;await new Promise(r=>go.onclick=r);go.disabled=true}else await wt(500);
+const d=await roll();L(`🎲 ${PL[i].n}掷出${d}`);await mv(i,d);await land(i)}save();await wt(400)}}end()}
+function end(){const m=ps.map(p=>p.m),h=ps.map(p=>p.h),w=ps.map(p=>p.m+p.h*100),N=k=>PL[k].n;const a=`🏁 终局！\n💰首富：${N(hi(m))}\n💗爱心王：${N(hi(h))}\n🏆人生赢家：${N(hi(w))}`;L(a.replace(/\n/g,'<br>'));go.textContent='再来一局';go.disabled=false;go.onclick=()=>{try{localStorage.removeItem('hubby')}catch(e){}location.reload()};alert(a)}
+$('#ff').onclick=e=>{fast=!fast;e.target.style.opacity=fast?.5:1};
+$('#rs').onclick=()=>{if(confirm('重开一局？')){try{localStorage.removeItem('hubby')}catch(e){}location.reload()}};
+go.disabled=true;L('欢迎来到 HUBBY CLAUDE！跑满8圈，比谁钱多、爱心多 💗');ui(S.t);run();
+</script></body></html>
